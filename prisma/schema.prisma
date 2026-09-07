@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ResidentBlock {
+  id         String          @id @default(cuid())
+  blockName  String          @unique
+  ownerName  String?
+  phone      String?
+  isOccupied Boolean         @default(true)
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  payments   PaymentRecord[]
+}
+
+model Period {
+  id        String          @id @default(cuid())
+  month     Int
+  year      Int
+  name      String
+  hasThr    Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  payments  PaymentRecord[]
+  expenses  ExpenseRecord[]
+
+  @@unique([month, year])
+}
+
+model PaymentRecord {
+  id          String        @id @default(cuid())
+  blockId     String
+  periodId    String
+  paidAt      DateTime?
+  isPaid      Boolean       @default(false)
+  iuranAmount Float         @default(0)
+  kasAmount   Float         @default(0)
+  infaqAmount Float         @default(0)
+  thrAmount   Float         @default(0)
+  totalAmount Float         @default(0)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  block  ResidentBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  period Period        @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([blockId, periodId])
+}
+
+model ExpenseRecord {
+  id        String    @id @default(cuid())
+  periodId  String?
+  date      DateTime  @default(now())
+  category  String
+  title     String
+  amount    Float
+  proofUrl  String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  period Period? @relation(fields: [periodId], references: [id], onDelete: SetNull)
+}
