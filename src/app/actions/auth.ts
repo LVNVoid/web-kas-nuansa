@@ -1,14 +1,11 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { AUTH_COOKIE_NAME, hashPassword, signSessionToken } from "@/lib/auth";
+import { AuthState } from "@/core/entities/user.entity";
+import { getLoginUseCase, getLogoutUseCase } from "@/di/container";
+import { DomainError } from "@/core/errors/domain.errors";
 
-export interface AuthState {
-  error?: string;
-  success?: boolean;
-}
+export type { AuthState };
 
 export async function loginAction(
   _prevState: AuthState | null,
@@ -17,40 +14,14 @@ export async function loginAction(
   const username = formData.get("username")?.toString().trim();
   const password = formData.get("password")?.toString();
 
-  if (!username || !password) {
-    return { error: "Username dan password wajib diisi." };
-  }
-
   try {
-    const admin = await prisma.adminUser.findUnique({
-      where: { username },
-    });
-
-    if (!admin) {
-      return { error: "Kredensial username atau password salah." };
-    }
-
-    const hashedPassword = hashPassword(password);
-    if (admin.passwordHash !== hashedPassword) {
-      return { error: "Kredensial username atau password salah." };
-    }
-
-    const token = await signSessionToken({
-      userId: admin.id,
-      username: admin.username,
-      name: admin.name,
-    });
-
-    const cookieStore = await cookies();
-    cookieStore.set(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    });
+    const loginUseCase = getLoginUseCase();
+    await loginUseCase.execute({ username, password });
   } catch (error) {
-    console.error("Login action error:", error);
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    console.error("LoginAction unexpected error:", error);
     return { error: "Terjadi kesalahan saat memproses login." };
   }
 
@@ -58,7 +29,7 @@ export async function loginAction(
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete(AUTH_COOKIE_NAME);
+  const logoutUseCase = getLogoutUseCase();
+  await logoutUseCase.execute();
   redirect("/login");
 }

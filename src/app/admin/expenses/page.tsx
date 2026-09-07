@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { getGetPeriodsUseCase, getGetExpensesUseCase } from "@/di/container";
 import {
   ExpenseManager,
   ExpenseRecordData,
-} from "@/components/admin/ExpenseManager";
-import { PeriodData } from "@/components/admin/PaymentManager";
+} from "@/presentation/components/admin/ExpenseManager";
+import { PeriodData } from "@/presentation/components/admin/PaymentManager";
 
 interface AdminExpensesPageProps {
   searchParams: Promise<{ period?: string }>;
@@ -14,10 +14,11 @@ export default async function AdminExpensesPage({
 }: AdminExpensesPageProps) {
   const { period: periodParam } = await searchParams;
 
+  const getPeriods = getGetPeriodsUseCase();
+  const getExpenses = getGetExpensesUseCase();
+
   // 1. Ambil semua periode
-  const periods = await prisma.period.findMany({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
+  const periods = await getPeriods.execute();
 
   // 2. Tentukan periode terpilih
   let selectedPeriod = null;
@@ -29,26 +30,7 @@ export default async function AdminExpensesPage({
   }
 
   // 3. Ambil daftar pengeluaran
-  let expenses: Array<{
-    id: string;
-    periodId: string | null;
-    date: Date;
-    category: string;
-    title: string;
-    amount: number;
-    notes: string | null;
-  }> = [];
-
-  if (selectedPeriod) {
-    expenses = await prisma.expenseRecord.findMany({
-      where: { periodId: selectedPeriod.id },
-      orderBy: { date: "desc" },
-    });
-  } else {
-    expenses = await prisma.expenseRecord.findMany({
-      orderBy: { date: "desc" },
-    });
-  }
+  const expenses = await getExpenses.execute(selectedPeriod?.id);
 
   const periodDataList: PeriodData[] = periods.map((p) => ({
     id: p.id,

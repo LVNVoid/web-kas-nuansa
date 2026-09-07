@@ -1,95 +1,137 @@
-# Tasks: Kas App Implementation
+# Tasks: Vault-Compliant Strict Clean Architecture
 
-## Phase 1: Foundation & Public View
+## Phase 1: Core Domain Layer
 
-### Task 1: Database Seeding & Data Access Utilities
-**Description:** Menyiapkan helper query database dan script seeding awal untuk master data blok (Blok B & C) dan periode aktif agar pengembangan UI dapat langsung diverifikasi.
+### Task 1: Domain Entities & Custom Domain Errors
+**Description:** Membangun entitas murni TypeScript dan custom error classes di dalam layer `src/core/` tanpa dependensi eksternal.
 - [x] Acceptance criteria:
-  - Helper query untuk agregasi saldo kas, total pemasukan, total pengeluaran, dan status pembayaran per periode.
-  - Script seed Prisma (`prisma/seed.ts`) yang dapat dijalankan untuk mengisi data awal jika diperlukan.
-- [x] Verification: `npm run lint; if ($?) { npx tsc --noEmit; if ($?) { npm test } }`
-- [x] Files: `src/lib/data.ts`, `prisma/seed.ts`, `package.json`
+  - `src/core/errors/domain.errors.ts` berisi `DomainError`, `NotFoundError`, `ConflictError`, `UnauthorizedError`, `ValidationError`.
+  - `src/core/entities/block.entity.ts` mendefinisikan `ResidentBlockEntity` dan `ResidentBlock`.
+  - `src/core/entities/period.entity.ts` mendefinisikan `PeriodEntity` dan `Period`.
+  - `src/core/entities/payment.entity.ts` mendefinisikan `PaymentRecordEntity`, `PaymentRecord`, dan `BlockPaymentRow`.
+  - `src/core/entities/expense.entity.ts` mendefinisikan `ExpenseRecordEntity` dan `ExpenseRecord`.
+  - `src/core/entities/dashboard.entity.ts` mendefinisikan `DashboardSummary`, `DashboardBlockItem`, dan `DashboardExpenseItem`.
+  - `src/core/entities/user.entity.ts` mendefinisikan `AdminUserEntity`, `AdminUser`, dan `SessionPayload`.
+  - Barrel export di `src/core/entities/index.ts` dan `src/core/errors/index.ts`.
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: None
+- [x] Files: `src/core/errors/*`, `src/core/entities/*`
 
-### Task 2: Public Dashboard UI (Rekap Saldo & Matriks Iuran)
-**Description:** Membangun tampilan utama `/` publik bergaya Notion Design System (`DESIGN.md`) yang memuat Saldo Kas, ringkasan mutasi, dan visualisasi matriks status lunas/belum lunas per blok.
+### Task 2: Repository Interfaces & Service Abstractions
+**Description:** Mendefinisikan interface repository murni di `src/core/repositories/` dan interface service eksternal di `src/core/services/`.
 - [x] Acceptance criteria:
-  - Komponen Hero/Header ringkas dengan warna warm paper canvas (`#f6f5f4`) dan aksen Notion blue (`#0075de`).
-  - Kartu ringkasan Saldo Berjalan, Total Pemasukan, dan Total Pengeluaran bulan aktif.
-  - Grid matriks blok hunian yang menampilkan status lunas (hijau/biru) dan belum lunas (abu-abu/muted) secara mobile-friendly.
-  - Filter pemilihan periode (Bulan & Tahun).
-- [x] Verification: `npm run build; if ($?) { npm test }`
-- [x] Files: `src/app/page.tsx`, `src/components/public/*`
+  - `src/core/repositories/block.repository.ts` mendefinisikan `IBlockRepository`.
+  - `src/core/repositories/period.repository.ts` mendefinisikan `IPeriodRepository`.
+  - `src/core/repositories/payment.repository.ts` mendefinisikan `IPaymentRepository`.
+  - `src/core/repositories/expense.repository.ts` mendefinisikan `IExpenseRepository`.
+  - `src/core/repositories/admin.repository.ts` mendefinisikan `IAdminRepository`.
+  - `src/core/services/auth.service.interface.ts` mendefinisikan `IAuthService`.
+  - `src/core/services/broadcast.service.interface.ts` mendefinisikan `IBroadcastService`.
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: Task 1
+- [x] Files: `src/core/repositories/*`, `src/core/services/*`
+
+### Task 3: Class-based Use Cases with Constructor Injection
+**Description:** Mengimplementasikan class Use Case di `src/core/use-cases/` yang menerima interface repository via constructor dan memiliki method `execute()`.
+- [x] Acceptance criteria:
+  - Format penamaan `{action}-{entity}.use-case.ts`.
+  - `src/core/use-cases/auth/`: `LoginUseCase`, `LogoutUseCase`, `GetSessionUseCase`.
+  - `src/core/use-cases/block/`: `GetBlocksUseCase`, `CreateBlockUseCase`, `UpdateBlockUseCase`, `DeleteBlockUseCase`.
+  - `src/core/use-cases/period/`: `GetPeriodsUseCase`, `CreatePeriodUseCase`.
+  - `src/core/use-cases/payment/`: `GetPaymentsByPeriodUseCase`, `QuickTogglePaymentUseCase`, `SavePaymentDetailUseCase`.
+  - `src/core/use-cases/expense/`: `GetExpensesUseCase`, `CreateExpenseUseCase`, `UpdateExpenseUseCase`, `DeleteExpenseUseCase`.
+  - `src/core/use-cases/dashboard/`: `GetDashboardSummaryUseCase`.
+  - `src/core/use-cases/broadcast/`: `GenerateBroadcastReportUseCase`.
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: Task 2
+- [x] Files: `src/core/use-cases/**/*`
 
 ## Checkpoint: Phase 1
-- [x] Dashboard publik render tanpa error dan responsif di mobile.
+- [x] Seluruh file di `src/core/` bersifat murni tanpa ketergantungan pada Prisma atau Next.js.
 
 ---
 
-## Phase 2: Authentication & Master Data
+## Phase 2: Infrastructure Layer & DI Container
 
-### Task 3: Admin Auth & Protected Route Middleware
-**Description:** Membangun sistem login khusus pengurus (username/password hash) dan middleware proteksi untuk seluruh rute di bawah `/admin`.
+### Task 4: Repository Implementations & External Services
+**Description:** Mengimplementasikan interface repository menggunakan Prisma ORM dan layanan eksternal di `src/infrastructure/`.
 - [x] Acceptance criteria:
-  - Halaman login admin `/login` dengan gaya Notion.
-  - Session cookie berbasis server-side JWT / secure cookie.
-  - Middleware me-redirect pengunjung tanpa auth saat mengakses `/admin/*`.
-- [x] Verification: `npm run lint; if ($?) { npx tsc --noEmit; if ($?) { npm test } }`
-- [x] Files: `src/app/login/page.tsx`, `src/middleware.ts`, `src/lib/auth.ts`
+  - `src/infrastructure/database/db.ts` / `prisma.ts`: Prisma Client connection pool.
+  - `src/infrastructure/repositories/block.repository.impl.ts` mengimplementasikan `IBlockRepository`.
+  - `src/infrastructure/repositories/period.repository.impl.ts` mengimplementasikan `IPeriodRepository`.
+  - `src/infrastructure/repositories/payment.repository.impl.ts` mengimplementasikan `IPaymentRepository`.
+  - `src/infrastructure/repositories/expense.repository.impl.ts` mengimplementasikan `IExpenseRepository`.
+  - `src/infrastructure/repositories/admin.repository.impl.ts` mengimplementasikan `IAdminRepository`.
+  - `src/infrastructure/services/auth.service.impl.ts` mengimplementasikan `IAuthService`.
+  - `src/infrastructure/services/broadcast.service.impl.ts` mengimplementasikan `IBroadcastService`.
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: Task 2, Task 3
+- [x] Files: `src/infrastructure/**/*`
 
-### Task 4: Admin Master Data Blok (CRUD)
-**Description:** Membangun antarmuka pengelolaan data master blok hunian dinamis (Tambah, Edit, Hapus) di `/admin/blocks`.
+### Task 5: DI Container Setup
+**Description:** Membangun dependency injection container dan factory functions di `src/di/`.
 - [x] Acceptance criteria:
-  - Tabel daftar blok dengan nama blok, pemilik, nomor kontak, dan status hunian.
-  - Modal / Form untuk menambah dan mengedit blok.
-  - Server actions untuk memproses mutasi data secara type-safe.
-- [x] Verification: `npm run build; if ($?) { npm test }`
-- [x] Files: `src/app/admin/blocks/*`, `src/app/actions/blocks.ts`
+  - `src/di/tokens.ts` mendefinisikan string constant tokens.
+  - `src/di/container.ts` merakit singleton repository/services dan mengekspor helper functions untuk mendapatkan instance use cases (misal `getLoginUseCase()`, `getGetBlocksUseCase()`, `getGetDashboardSummaryUseCase()`, dll).
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: Task 3, Task 4
+- [x] Files: `src/di/tokens.ts`, `src/di/container.ts`
 
 ## Checkpoint: Phase 2
-- [x] Admin dapat login dan mengelola master blok hunian secara dinamis.
+- [x] DI Container berhasil merakit instance use cases dengan dependency repository konkret.
 
 ---
 
-## Phase 3: Transaction Management
+## Phase 3: Presentation Layer & Server Actions Migration
 
-### Task 5: Admin Input & Edit Pemasukan (Iuran, Kas, Infaq, THR)
-**Description:** Antarmuka pencatatan pembayaran warga per blok dan per periode di `/admin/payments`.
+### Task 6: Move UI Components to `src/presentation/`
+**Description:** Memindahkan dan menyusun komponen UI ke `src/presentation/components/` sesuai arsitektur vault.
 - [x] Acceptance criteria:
-  - Form/tabel pencatatan dengan kolom terpisah: Iuran, Kas, Infaq, dan kolom khusus THR jika bulan aktif memiliki opsi THR.
-  - Fitur toggle status lunas cepat (*quick toggle*).
-- [x] Verification: `npm run build; if ($?) { npm test }`
-- [x] Files: `src/app/admin/payments/*`, `src/app/actions/payments.ts`
+  - Komponen admin di `src/presentation/components/admin/`.
+  - Komponen publik di `src/presentation/components/public/`.
+  - Provider di `src/presentation/components/providers/`.
+  - Path `@/components/*` diarahkan atau diperbarui ke `@/presentation/components/*`.
+- [x] Verification: `npx tsc --noEmit`
+- [x] Dependencies: Task 1
+- [x] Files: `src/presentation/**/*`, `src/components/**/*`
 
-### Task 6: Admin Pencatatan Pengeluaran Kas & Mutasi
-**Description:** Antarmuka pencatatan mutasi pengeluaran kas di `/admin/expenses`.
+### Task 7: Update Server Actions & RSC Pages via DI Container
+**Description:** Memperbarui Server Actions di `src/app/actions/` dan halaman React Server Components (`src/app/page.tsx`, `src/app/admin/**/page.tsx`) agar mengambil Use Case dari `src/di/container.ts`.
 - [x] Acceptance criteria:
-  - Form tambah pengeluaran (Tanggal, Kategori, Judul/Uraian, Nominal, Catatan).
-  - Tabel riwayat pengeluaran dengan filter periode.
-- [x] Verification: `npm run build; if ($?) { npm test }`
-- [x] Files: `src/app/admin/expenses/*`, `src/app/actions/expenses.ts`
+  - Seluruh Server Actions memanggil `useCase.execute(input)` via DI Container dan menangani `DomainError`.
+  - RSC `page.tsx` memanggil use cases via DI Container.
+  - Middleware menggunakan `IAuthService` atau helper auth dari infrastructure.
+- [x] Verification: `npm run lint; if ($?) { npx tsc --noEmit; if ($?) { npm run build } }`
+- [x] Dependencies: Task 5, Task 6
+- [x] Files: `src/app/actions/*`, `src/app/**/*.tsx`, `src/middleware.ts`
 
 ## Checkpoint: Phase 3
-- [x] Transaksi masuk & keluar tersimpan ke database dan mengupdate saldo kas secara real-time.
+- [x] Web application berjalan normal, build produksi sukses, dan seluruh interaksi UI bekerja tanpa error.
 
 ---
 
-## Phase 4: The Broadcast Engine & Polish
+## Phase 4: Unit Test Overhaul, Cleanup, and Vault Sync
 
-### Task 7: WhatsApp Broadcast Generator
-**Description:** Halaman `/admin/broadcast` yang otomatis merangkum data bulan berjalan ke format teks WhatsApp siap kirim.
+### Task 8: Refactor Unit Tests with Mock Repositories
+**Description:** Menyesuaikan unit test di `__tests__/` untuk menguji class use cases dengan constructor injection mock dan memperbarui test komponen.
 - [x] Acceptance criteria:
-  - Generator teks terstruktur: Header RT, Saldo Awal, Rincian Pemasukan, Rincian Pengeluaran, Saldo Akhir, dan Daftar Blok yang belum bayar.
-  - Tombol "Copy to Clipboard" dengan notifikasi sukses.
-- [x] Verification: `npm run build; if ($?) { npm test }`
-- [x] Files: `src/app/admin/broadcast/*`, `src/lib/broadcast.ts`
+  - `__tests__/use-cases/*`: Unit tests class use cases dengan mock repository instances.
+  - `__tests__/infrastructure/*`: Test auth service dan broadcast service.
+  - `__tests__/components/*`: Test komponen UI dengan mock Server Actions.
+  - 100% tes lolos (`npm test`).
+- [x] Verification: `npm test`
+- [x] Dependencies: Task 7
+- [x] Files: `__tests__/**/*`
 
-### Task 8: End-to-End Polish, Quality Checks, and Vault Sync
-**Description:** Review kualitas akhir, unit test tambahan, validasi linting & typecheck, serta dokumentasi sesi di Obsidian Vault.
+### Task 9: Cleanup Deprecated Folders & Obsidian Vault Sync
+**Description:** Menghapus folder lama `src/domain/`, `src/use-cases/`, menjalankan quality check menyeluruh, dan memperbarui catatan sesi di Obsidian Vault.
 - [x] Acceptance criteria:
-  - All quality checks green (`npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`).
-  - Session log & Obsidian Vault tersinkronisasi via git commit & push.
-- [x] Verification: `npm run lint; if ($?) { npx tsc --noEmit; if ($?) { npm test; if ($?) { npm run build } } }`
-- [x] Files: `__tests__/*`, Obsidian Vault Notes
+  - Hapus folder `src/domain/` dan `src/use-cases/`.
+  - Verifikasi: `npm run lint; if ($?) { npx tsc --noEmit; if ($?) { npm test; if ($?) { npm run build } } }`.
+  - Update session log di Obsidian Vault dan jalankan git commit & push pada vault.
+- [x] Verification: Quality check command
+- [x] Dependencies: Task 8
+- [x] Files: `src/domain/`, `src/use-cases/`, Obsidian Vault
 
 ## Checkpoint: Complete
-- [x] Seluruh kriteria penerimaan terpenuhi, tes dan linter lolos 100%, dokumentasi vault tersinkronisasi.
+- [x] Seluruh kriteria penerimaan terpenuhi, Clean Architecture sesuai aturan vault 100%, linter & test lulus, dan dokumentasi vault tersinkronisasi.

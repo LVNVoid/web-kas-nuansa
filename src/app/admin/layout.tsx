@@ -1,12 +1,13 @@
-import { getSession } from "@/lib/auth";
-import { AdminHeader } from "@/components/admin/AdminHeader";
+import { getGetSessionUseCase } from "@/di/container";
+import { AdminHeader } from "@/presentation/components/admin/AdminHeader";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  const getSession = getGetSessionUseCase();
+  const session = await getSession.execute();
 
   return (
     <div className="min-h-screen bg-[#fbfbfa] text-[#191919]">

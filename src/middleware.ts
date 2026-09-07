@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, AuthServiceImpl } from "@/infrastructure/services/auth.service.impl";
+
+const authService = new AuthServiceImpl();
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -8,7 +10,7 @@ export async function middleware(request: NextRequest) {
 
   let isValid = false;
   if (token) {
-    const session = await verifySessionToken(token);
+    const session = await authService.verifySessionToken(token);
     isValid = session !== null;
   }
 

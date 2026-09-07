@@ -1,7 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { getDashboardData } from "@/lib/data";
-import { BroadcastManager } from "@/components/admin/BroadcastManager";
-import { PeriodData } from "@/components/admin/PaymentManager";
+import { getGetPeriodsUseCase, getGetDashboardSummaryUseCase } from "@/di/container";
+import { BroadcastManager } from "@/presentation/components/admin/BroadcastManager";
+import { PeriodData } from "@/presentation/components/admin/PaymentManager";
 
 interface AdminBroadcastPageProps {
   searchParams: Promise<{ period?: string }>;
@@ -12,10 +11,11 @@ export default async function AdminBroadcastPage({
 }: AdminBroadcastPageProps) {
   const { period: periodParam } = await searchParams;
 
+  const getPeriods = getGetPeriodsUseCase();
+  const getDashboardSummary = getGetDashboardSummaryUseCase();
+
   // 1. Ambil semua periode
-  const periods = await prisma.period.findMany({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
+  const periods = await getPeriods.execute();
 
   // 2. Tentukan periode aktif
   let selectedPeriod = null;
@@ -27,7 +27,7 @@ export default async function AdminBroadcastPage({
   }
 
   // 3. Ambil dashboard data untuk kalkulasi teks rekap
-  const summary = await getDashboardData(selectedPeriod?.id);
+  const summary = await getDashboardSummary.execute(selectedPeriod?.id);
 
   const periodDataList: PeriodData[] = periods.map((p) => ({
     id: p.id,

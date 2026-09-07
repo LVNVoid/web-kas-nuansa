@@ -25,6 +25,8 @@ model ResidentBlock {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   payments   PaymentRecord[]
+
+  @@index([blockName])
 }
 
 model Period {
@@ -39,6 +41,7 @@ model Period {
   expenses  ExpenseRecord[]
 
   @@unique([month, year])
+  @@index([year, month])
 }
 
 model PaymentRecord {
@@ -60,6 +63,8 @@ model PaymentRecord {
   period Period        @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
   @@unique([blockId, periodId])
+  @@index([periodId])
+  @@index([isPaid])
 }
 
 model ExpenseRecord {
@@ -75,4 +80,7 @@ model ExpenseRecord {
   updatedAt DateTime  @updatedAt
 
   period Period? @relation(fields: [periodId], references: [id], onDelete: SetNull)
+
+  @@index([periodId])
+  @@index([date(sort: Desc)])
 }

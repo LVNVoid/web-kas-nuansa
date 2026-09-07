@@ -1,8 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import {
+  getCreateBlockUseCase,
+  getUpdateBlockUseCase,
+  getDeleteBlockUseCase,
+} from "@/di/container";
+import { DomainError } from "@/core/errors/domain.errors";
 
 export interface BlockActionResult {
   success: boolean;
@@ -10,42 +14,30 @@ export interface BlockActionResult {
 }
 
 export async function createBlockAction(formData: FormData): Promise<BlockActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
-  const blockName = formData.get("blockName")?.toString().trim().toUpperCase();
+  const blockName = formData.get("blockName")?.toString();
   const ownerName = formData.get("ownerName")?.toString().trim() || null;
   const phone = formData.get("phone")?.toString().trim() || null;
   const isOccupied = formData.get("isOccupied") === "true";
   const notes = formData.get("notes")?.toString().trim() || null;
 
-  if (!blockName) {
-    return { success: false, error: "Nama blok wajib diisi." };
-  }
-
   try {
-    const existing = await prisma.residentBlock.findUnique({
-      where: { blockName },
-    });
-    if (existing) {
-      return { success: false, error: `Blok ${blockName} sudah terdaftar.` };
-    }
-
-    await prisma.residentBlock.create({
-      data: {
-        blockName,
-        ownerName,
-        phone,
-        isOccupied,
-        notes,
-      },
+    const createBlock = getCreateBlockUseCase();
+    await createBlock.execute({
+      blockName: blockName || "",
+      ownerName,
+      phone,
+      isOccupied,
+      notes,
     });
 
     revalidatePath("/admin/blocks");
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error creating block:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("createBlockAction error:", error);
     return { success: false, error: "Gagal menambahkan blok." };
   }
 }
@@ -54,64 +46,47 @@ export async function updateBlockAction(
   id: string,
   formData: FormData
 ): Promise<BlockActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
-  const blockName = formData.get("blockName")?.toString().trim().toUpperCase();
+  const blockName = formData.get("blockName")?.toString();
   const ownerName = formData.get("ownerName")?.toString().trim() || null;
   const phone = formData.get("phone")?.toString().trim() || null;
   const isOccupied = formData.get("isOccupied") === "true";
   const notes = formData.get("notes")?.toString().trim() || null;
 
-  if (!blockName) {
-    return { success: false, error: "Nama blok wajib diisi." };
-  }
-
   try {
-    const existing = await prisma.residentBlock.findFirst({
-      where: {
-        blockName,
-        NOT: { id },
-      },
-    });
-    if (existing) {
-      return { success: false, error: `Nama Blok ${blockName} sudah digunakan oleh data lain.` };
-    }
-
-    await prisma.residentBlock.update({
-      where: { id },
-      data: {
-        blockName,
-        ownerName,
-        phone,
-        isOccupied,
-        notes,
-      },
+    const updateBlock = getUpdateBlockUseCase();
+    await updateBlock.execute(id, {
+      blockName: blockName || "",
+      ownerName,
+      phone,
+      isOccupied,
+      notes,
     });
 
     revalidatePath("/admin/blocks");
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error updating block:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("updateBlockAction error:", error);
     return { success: false, error: "Gagal memperbarui blok." };
   }
 }
 
 export async function deleteBlockAction(id: string): Promise<BlockActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
   try {
-    await prisma.residentBlock.delete({
-      where: { id },
-    });
+    const deleteBlock = getDeleteBlockUseCase();
+    await deleteBlock.execute(id);
 
     revalidatePath("/admin/blocks");
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting block:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("deleteBlockAction error:", error);
     return { success: false, error: "Gagal menghapus blok." };
   }
 }

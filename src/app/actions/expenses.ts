@@ -1,8 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import {
+  getCreateExpenseUseCase,
+  getUpdateExpenseUseCase,
+  getDeleteExpenseUseCase,
+} from "@/di/container";
+import { DomainError } from "@/core/errors/domain.errors";
 
 export interface ExpenseActionResult {
   success: boolean;
@@ -10,32 +14,23 @@ export interface ExpenseActionResult {
 }
 
 export async function createExpenseAction(formData: FormData): Promise<ExpenseActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
   const periodId = formData.get("periodId")?.toString() || null;
   const dateStr = formData.get("date")?.toString();
   const category = formData.get("category")?.toString().trim() || "Operasional";
-  const title = formData.get("title")?.toString().trim();
+  const title = formData.get("title")?.toString().trim() || "";
   const amount = parseFloat(formData.get("amount")?.toString() || "0") || 0;
   const notes = formData.get("notes")?.toString().trim() || null;
-
-  if (!title || amount <= 0) {
-    return { success: false, error: "Judul pengeluaran dan nominal (> 0) wajib diisi." };
-  }
-
   const date = dateStr ? new Date(dateStr) : new Date();
 
   try {
-    await prisma.expenseRecord.create({
-      data: {
-        periodId,
-        date,
-        category,
-        title,
-        amount,
-        notes,
-      },
+    const createExpense = getCreateExpenseUseCase();
+    await createExpense.execute({
+      periodId,
+      date,
+      category,
+      title,
+      amount,
+      notes,
     });
 
     revalidatePath("/admin/expenses");
@@ -43,7 +38,10 @@ export async function createExpenseAction(formData: FormData): Promise<ExpenseAc
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error creating expense:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("createExpenseAction error:", error);
     return { success: false, error: "Gagal menyimpan pengeluaran." };
   }
 }
@@ -52,33 +50,23 @@ export async function updateExpenseAction(
   id: string,
   formData: FormData
 ): Promise<ExpenseActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
   const periodId = formData.get("periodId")?.toString() || null;
   const dateStr = formData.get("date")?.toString();
   const category = formData.get("category")?.toString().trim() || "Operasional";
-  const title = formData.get("title")?.toString().trim();
+  const title = formData.get("title")?.toString().trim() || "";
   const amount = parseFloat(formData.get("amount")?.toString() || "0") || 0;
   const notes = formData.get("notes")?.toString().trim() || null;
-
-  if (!title || amount <= 0) {
-    return { success: false, error: "Judul pengeluaran dan nominal (> 0) wajib diisi." };
-  }
-
   const date = dateStr ? new Date(dateStr) : new Date();
 
   try {
-    await prisma.expenseRecord.update({
-      where: { id },
-      data: {
-        periodId,
-        date,
-        category,
-        title,
-        amount,
-        notes,
-      },
+    const updateExpense = getUpdateExpenseUseCase();
+    await updateExpense.execute(id, {
+      periodId,
+      date,
+      category,
+      title,
+      amount,
+      notes,
     });
 
     revalidatePath("/admin/expenses");
@@ -86,26 +74,28 @@ export async function updateExpenseAction(
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error updating expense:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("updateExpenseAction error:", error);
     return { success: false, error: "Gagal memperbarui pengeluaran." };
   }
 }
 
 export async function deleteExpenseAction(id: string): Promise<ExpenseActionResult> {
-  const session = await getSession();
-  if (!session) return { success: false, error: "Unauthorized" };
-
   try {
-    await prisma.expenseRecord.delete({
-      where: { id },
-    });
+    const deleteExpense = getDeleteExpenseUseCase();
+    await deleteExpense.execute(id);
 
     revalidatePath("/admin/expenses");
     revalidatePath("/admin/broadcast");
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting expense:", error);
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    console.error("deleteExpenseAction error:", error);
     return { success: false, error: "Gagal menghapus pengeluaran." };
   }
 }

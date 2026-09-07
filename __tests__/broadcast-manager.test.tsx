@@ -1,8 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { BroadcastManager } from "@/components/admin/BroadcastManager";
-import { PeriodData } from "@/components/admin/PaymentManager";
-import { DashboardSummary } from "@/lib/data";
+import { BroadcastManager } from "@/presentation/components/admin/BroadcastManager";
+import { PeriodData } from "@/core/entities/period.entity";
+import { DashboardSummary } from "@/core/entities/dashboard.entity";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({

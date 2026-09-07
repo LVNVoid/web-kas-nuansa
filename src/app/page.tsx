@@ -1,9 +1,9 @@
-import { Navbar } from "@/components/public/Navbar";
-import { SummaryCards } from "@/components/public/SummaryCards";
-import { PeriodSelector } from "@/components/public/PeriodSelector";
-import { BlockGrid } from "@/components/public/BlockGrid";
-import { ExpenseList } from "@/components/public/ExpenseList";
-import { getAvailablePeriods, getDashboardData } from "@/lib/data";
+import { Navbar } from "@/presentation/components/public/Navbar";
+import { SummaryCards } from "@/presentation/components/public/SummaryCards";
+import { PeriodSelector } from "@/presentation/components/public/PeriodSelector";
+import { BlockGrid } from "@/presentation/components/public/BlockGrid";
+import { ExpenseList } from "@/presentation/components/public/ExpenseList";
+import { getGetPeriodsUseCase, getGetDashboardSummaryUseCase } from "@/di/container";
 
 interface PageProps {
   searchParams: Promise<{ period?: string }>;
@@ -11,8 +11,11 @@ interface PageProps {
 
 export default async function HomePage({ searchParams }: PageProps) {
   const { period } = await searchParams;
-  const periods = await getAvailablePeriods();
-  const summary = await getDashboardData(period);
+  const getPeriods = getGetPeriodsUseCase();
+  const getDashboardSummary = getGetDashboardSummaryUseCase();
+
+  const periods = await getPeriods.execute();
+  const summary = await getDashboardSummary.execute(period);
 
   return (
     <div className="min-h-screen bg-[#fbfbfa] text-[#191919]">

@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { BlockManager, ResidentBlockData } from "@/components/admin/BlockManager";
+import { BlockManager, ResidentBlockData } from "@/presentation/components/admin/BlockManager";
 
 jest.mock("@/app/actions/blocks", () => ({
   createBlockAction: jest.fn(),
@@ -17,6 +17,8 @@ describe("Admin - BlockManager Component", () => {
       phone: "08123456789",
       isOccupied: true,
       notes: "Dekat pos satpam",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     {
       id: "b2",
@@ -25,6 +27,8 @@ describe("Admin - BlockManager Component", () => {
       phone: null,
       isOccupied: false,
       notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   ];
 

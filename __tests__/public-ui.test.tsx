@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { SummaryCards } from "@/components/public/SummaryCards";
-import { DashboardSummary } from "@/lib/data";
+import { SummaryCards } from "@/presentation/components/public/SummaryCards";
+import { DashboardSummary } from "@/core/entities/dashboard.entity";
 
 describe("Public UI - SummaryCards Component", () => {
   const mockSummary: DashboardSummary = {

@@ -4,7 +4,7 @@ import {
   PaymentManager,
   BlockPaymentRow,
   PeriodData,
-} from "@/components/admin/PaymentManager";
+} from "@/presentation/components/admin/PaymentManager";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({

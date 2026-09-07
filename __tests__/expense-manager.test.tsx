@@ -3,8 +3,8 @@ import { render, screen } from "@testing-library/react";
 import {
   ExpenseManager,
   ExpenseRecordData,
-} from "@/components/admin/ExpenseManager";
-import { PeriodData } from "@/components/admin/PaymentManager";
+} from "@/presentation/components/admin/ExpenseManager";
+import { PeriodData } from "@/core/entities/period.entity";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
